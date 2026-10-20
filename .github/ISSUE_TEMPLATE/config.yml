@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Mod template
+    url: https://github.com/EchoTools/echo-mod-template-repo
+    about: Start a new mod here; its README and AGENTS.md have the rules and formats.

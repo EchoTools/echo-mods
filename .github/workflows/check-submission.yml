@@ -1,0 +1,79 @@
+# Checks a mod submission and comments the result. Two jobs on purpose: "inspect" downloads and
+# loads the submitted DLL, so it runs with a read-only token and no secrets; "report" may write the
+# issue, but runs nothing from the submission.
+name: check submission
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: submission-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  inspect:
+    if: >-
+      contains(github.event.issue.labels.*.name, 'submission') &&
+      github.event.issue.state == 'open' &&
+      (github.event_name == 'issues' ||
+       (startsWith(github.event.comment.body, '/check') && github.event.comment.user.login == github.event.issue.user.login))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/checkout@v4
+        with:
+          repository: EchoTools/echo-mod-template-repo
+          path: template
+          persist-credentials: false
+
+      - name: Toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends mingw-w64 wine wine64 python3
+          x86_64-w64-mingw32-gcc -O2 -municode -o smoke_host.exe template/tests/smoke_host.c
+
+      - name: Inspect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: python3 scripts/inspect_submission.py --template template --smoke-host "$PWD/smoke_host.exe" --out report.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: report
+          path: report.json
+          retention-days: 30
+
+  report:
+    needs: inspect
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: report
+
+      - name: Comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: python3 scripts/report_submission.py report.json

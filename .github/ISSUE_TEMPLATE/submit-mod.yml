@@ -1,0 +1,53 @@
+name: Submit a mod
+description: Ask for your mod to be added to the Echo VR launcher.
+title: "Submit: <mod id>"
+labels: ["submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before you submit, your mod's repo needs a GitHub release made by the
+        [template's](https://github.com/EchoTools/echo-mod-template-repo) release workflow.
+        A check runs on this issue and comments what it found. Edit the issue (or comment `/check`)
+        to run it again after a new release.
+  - type: input
+    id: repo
+    attributes:
+      label: Repository
+      description: Your mod's public GitHub repository.
+      placeholder: https://github.com/you/my-cool-mod
+    validations:
+      required: true
+  - type: input
+    id: mod_id
+    attributes:
+      label: Mod id
+      description: The `id` in your echo-mod.json.
+      placeholder: my-cool-mod
+    validations:
+      required: true
+  - type: input
+    id: echovrce
+    attributes:
+      label: EchoVRCE username
+      description: Your username on EchoVRCE (the one players see). It becomes your account for your dev channel.
+    validations:
+      required: true
+  - type: textarea
+    id: about
+    attributes:
+      label: What does it do?
+      description: A few sentences for the reviewer, and anything the code doesn't make obvious (what it hooks, what it sends where).
+    validations:
+      required: true
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Rules
+      options:
+        - label: The mod is no cheat, collects no player data, and its capabilities say what it does.
+          required: true
+        - label: The source is public under an open-source license, and the launcher may redistribute its releases.
+          required: true
+        - label: I made this mod or may submit it for its authors.
+          required: true
