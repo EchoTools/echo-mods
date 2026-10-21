@@ -9,12 +9,15 @@ Reads ISSUE_NUMBER, GH_TOKEN, GITHUB_REPOSITORY and, if set, VT_API_KEY from the
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.error
 import urllib.request
 
 MARKER = "<!-- echo-mods-check -->"
+# Which release the check looked at, for echo-mod approve: it approves only that one.
+CHECKED = "<!-- echo-mods-checked {} -->"
 REPO = os.environ.get("GITHUB_REPOSITORY", "EchoTools/echo-mods")
 ICONS = {"ok": "✅", "warning": "⚠️", "error": "❌"}
 
@@ -55,7 +58,11 @@ def comment_body(report):
             items.append(["ok", "VirusTotal: no engine flags it."])
     passed = not any(level == "error" for level, _ in items)
 
-    lines = [MARKER, "## Automatic check: " + ("passed" if passed else "something to fix"), ""]
+    checked = {"tag": facts.get("tag", ""), "release_id": facts.get("release_id", 0), "passed": passed}
+    if not re.fullmatch(r"[A-Za-z0-9._+-]{1,100}", str(checked["tag"])) or not isinstance(checked["release_id"], int):
+        checked = {"tag": "", "release_id": 0, "passed": False}
+    lines = [MARKER, CHECKED.format(json.dumps(checked)),
+             "## Automatic check: " + ("passed" if passed else "something to fix"), ""]
     for level, text in items:
         lines.append(f"- {ICONS.get(level, '•')} {clean(text)}")
     lines += ["", "<details><summary>What the check found</summary>", "", "| | |", "|---|---|"]

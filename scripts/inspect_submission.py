@@ -18,12 +18,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.error
 import urllib.request
-import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-CATALOGUE = "https://release.echovr.de/launcher/mods.json"
+# The launcher's own mods, and the published third-party ones.
+CATALOGUES = ("https://release.echovr.de/launcher/mods.json", "https://release.echovr.de/launcher/catalogue.json")
 THIS_REPO = os.environ.get("GITHUB_REPOSITORY", "EchoTools/echo-mods")
 REPO_URL = re.compile(r"^https://github\.com/([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))/([A-Za-z0-9._-]{1,100}?)(?:\.git)?/?$")
 # OSI-approved licenses GitHub detects (SPDX ids). Anything else gets a look by hand.
@@ -106,14 +107,20 @@ def taken_ids(report, own_number):
     """Ids and files other mods use or reserved: the launcher's catalogue, approved submissions,
     and open submissions older than this one."""
     ids, files = {}, {}
-    try:
-        with urllib.request.urlopen(CATALOGUE, timeout=30) as r:
-            for m in json.load(r).get("mods", []):
-                ids[m.get("id", "")] = "the launcher's catalogue"
-                if m.get("file"):
-                    files[m["file"].lower()] = "the launcher's catalogue"
-    except Exception as e:  # noqa: BLE001
-        report.warn(f"couldn't read the launcher's catalogue to compare ids ({e})")
+    for url in CATALOGUES:
+        try:
+            with urllib.request.urlopen(url, timeout=30) as r:
+                for m in json.load(r).get("mods", []):
+                    ids[m.get("id", "")] = "the launcher's catalogue"
+                    for v in [m] + list(m.get("versions") or []):
+                        for f in [v.get("file")] + list((v.get("pack") or {}).get("plugins") or []):
+                            if isinstance(f, str) and f:
+                                files[f.lower()] = "the launcher's catalogue"
+        except urllib.error.HTTPError as e:
+            if e.code != 404:
+                report.warn(f"couldn't read the launcher's catalogue to compare ids ({e})")
+        except Exception as e:  # noqa: BLE001
+            report.warn(f"couldn't read the launcher's catalogue to compare ids ({e})")
     for state, label in (("all", "approved"), ("open", "submission")):
         try:
             found = gh_api(f"repos/{THIS_REPO}/issues?state={state}&labels={label}&per_page=100")
@@ -194,7 +201,8 @@ def check(args, report):
         return
     release = releases[0]
     tag = release["tag_name"]
-    report.facts.update(tag=tag, prerelease=release.get("prerelease", False), release_url=release["html_url"])
+    report.facts.update(tag=tag, release_id=release["id"], prerelease=release.get("prerelease", False),
+                        release_url=release["html_url"])
     assets = {a["name"]: a["browser_download_url"] for a in release.get("assets", [])}
     work = Path(tempfile.mkdtemp(prefix="submission-"))
     for needed in ("echo-mod.json", "SHA256SUMS"):
@@ -211,17 +219,6 @@ def check(args, report):
     download(assets["SHA256SUMS"], work / "SHA256SUMS")
     download(assets[main_file], work / main_file)
 
-    sums = {}
-    for line in (work / "SHA256SUMS").read_text().splitlines():
-        parts = line.split()
-        if len(parts) == 2:
-            sums[parts[1].lstrip("*")] = parts[0]
-    for f in ("echo-mod.json", main_file):
-        if sums.get(f) != sha256(work / f):
-            report.error(f"`{f}` doesn't match SHA256SUMS.")
-    want = manifest.get("sha256") if kind == "mod" else (manifest.get("pack") or {}).get("sha256")
-    if want != sha256(work / main_file):
-        report.error(f"`{main_file}` doesn't match the sha256 in echo-mod.json.")
     report.facts.update(file=main_file, sha256=sha256(work / main_file), size=(work / main_file).stat().st_size,
                         version=manifest.get("version"), kind=kind, capabilities=manifest.get("capabilities"),
                         target=manifest.get("target"), visibility=manifest.get("visibility", "public"))
@@ -245,36 +242,16 @@ def check(args, report):
     if "attested_commit" in report.facts:
         report.ok(f"Release {tag} built and attested by the repo's release workflow.")
 
-    # ---- the manifest and the DLL, with the template's own checks ----
+    # ---- the release's files, the manifest and the DLL: the template's checks, the same ones the
+    # launcher's catalogue applies to every later release ----
     sys.path.insert(0, str(Path(args.template) / "tools"))
     import check_mod  # noqa: E402
 
     if manifest.get("id") != mod_id:
         report.error(f"The release's id is `{manifest.get('id')}`, the form says `{mod_id}`.")
-    plain = dict(manifest)
-    if isinstance(plain.get("settings"), dict):
-        plain.pop("settings")  # the release carries the object; the check reads a path
-    if kind == "pack":
-        plain.pop("pack", None)  # checked from the zip below
     sub = check_mod.Report()
-    check_mod.check_manifest(plain, sub, work)
-    if kind == "pack":
-        with zipfile.ZipFile(work / main_file) as zf:
-            names = zf.namelist()
-            if f"plugins/{manifest.get('file')}" not in names:
-                sub.error(f"the pack has no plugins/{manifest.get('file')}")
-            else:
-                zf.extract(f"plugins/{manifest.get('file')}", work / "unpacked")
-            content = (manifest.get("pack") or {}).get("content", "")
-            if f"content/{content}/content.json" not in names:
-                sub.error(f"the pack has no content/{content}/content.json")
-            bad = [n for n in names if not (n.startswith("plugins/") or n.startswith(f"content/{content}/"))]
-            if bad:
-                sub.error("the pack has files outside plugins/ and content/<id>/: " + ", ".join(bad[:5]))
-        dll = work / "unpacked" / "plugins" / str(manifest.get("file"))
-    else:
-        dll = work / main_file
-    if dll.is_file():
+    _manifest, dll = check_mod.check_published(work, tag, release.get("prerelease", False), sub)
+    if dll is not None and dll.is_file():
         check_mod.check_dll(str(dll), manifest, sub)
         smoke_dir = work / "smoke"
         smoke_dir.mkdir()
