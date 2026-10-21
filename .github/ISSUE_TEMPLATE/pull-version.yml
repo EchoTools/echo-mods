@@ -1,0 +1,41 @@
+name: Pull a version
+description: A published version of your mod must not be used any more (it crashes, it breaks matches).
+title: "Pull: <mod id> <version>"
+labels: ["pull-version"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A maintainer turns the version off for everyone; launchers go back to the version before.
+        Release a fixed version as usual: it goes live on its own.
+  - type: input
+    id: mod
+    attributes:
+      label: Mod id
+      placeholder: my-cool-mod
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: One version (1.2.0), several (">=1.2.0 <1.2.3"), or all.
+      placeholder: 1.2.0
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: What's wrong
+      description: Players see a short version of this in the launcher.
+    validations:
+      required: true
+  - type: dropdown
+    id: urgent
+    attributes:
+      label: How bad is it?
+      options:
+        - It crashes the game or breaks matches
+        - Something smaller (a fix is coming)
+    validations:
+      required: true
