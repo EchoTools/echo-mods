@@ -30,7 +30,7 @@ body:
     id: echovrce
     attributes:
       label: EchoVRCE username
-      description: Your username on EchoVRCE (the one players see). It becomes your account for your dev channel and your private mods. Like everything in this issue, it is public.
+      description: Your username on EchoVRCE (the one players see), so we know who you are there. Like everything in this issue, it is public.
     validations:
       required: true
   - type: textarea
