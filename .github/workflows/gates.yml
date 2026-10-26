@@ -1,0 +1,115 @@
+# The pull-request gates (scripts/gates.py): a conventional PR title and commits, well-formed credit
+# trailers, a current approval from someone other than the author on changes to anything but docs, and
+# actions pinned by commit. Each prints one JSON record; the records are kept as an artifact.
+#
+# Trust boundary: `pull_request` and `pull_request_review`, never `pull_request_target`. The token is
+# read-only, no secret is named, nothing from the PR is executed except this repo's own scripts, and the
+# title reaches the script through env only.
+name: gates
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions: {}
+
+concurrency:
+  group: gates-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: The PR title is a conventional commit header
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: python3 -I scripts/gates.py title | tee gate-title.jsonl
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: gate-title
+          path: gate-title.jsonl
+          retention-days: 90
+
+  commits:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Every commit is conventional and its credit trailers are well formed
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python3 -I scripts/gates.py commits --base "$BASE" --head "$HEAD" | tee gate-commits.jsonl
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: gate-commits
+          path: gate-commits.jsonl
+          retention-days: 90
+
+  review:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: A current approval from someone else, when more than docs changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: python3 -I scripts/gates.py review --repo "$REPO" --pr "$PR" | tee gate-review.jsonl
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: gate-review
+          path: gate-review.jsonl
+          retention-days: 90
+
+  pins:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Every action is pinned by commit
+        run: python3 -I scripts/gates.py pins | tee gate-pins.jsonl
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: gate-pins
+          path: gate-pins.jsonl
+          retention-days: 90
+
+  tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: The gates' own tests
+        run: python3 -I -m unittest discover -s tests -k test_gates -v
