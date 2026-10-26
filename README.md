@@ -14,7 +14,10 @@ launcher for players.
    release.
 3. **Keep the repo public, with an open-source license.** If your mod uses someone else's code, keep their
    license file and say who they are in `NOTICE` and your README. Players and reviewers rely on that.
-4. **Make a release** with the template's release workflow (a tag `v<version>`).
+4. **Make a release** with the template's release workflow (a tag `v<version>`). The workflow builds it into a
+   *draft* release. **Publish that draft in your own repo** before you submit: the check only sees published
+   releases. That release is yours and it is not signed. The signed release is a different one: the draft that
+   the EchoTools copy builds after your change has been reviewed (see "What happens next").
 
 ## Submitting it
 
