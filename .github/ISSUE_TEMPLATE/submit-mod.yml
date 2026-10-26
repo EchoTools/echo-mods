@@ -40,6 +40,23 @@ body:
       description: A few sentences for the reviewer, and anything the code doesn't make obvious (what it hooks, what it sends where).
     validations:
       required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: "Optional. One per line: an https:// link, a `|`, and what it shows. Up to 8. They go in your listing in the launcher's plugin browser."
+      placeholder: "https://example.com/menu.png | The mod's menu in the lobby"
+  - type: input
+    id: video
+    attributes:
+      label: Video
+      description: Optional. One https:// link to a video of the mod.
+  - type: textarea
+    id: credits
+    attributes:
+      label: Credits
+      description: "Everyone whose work the mod builds on, one per line: name, a `|`, what they did, and optionally a `|` and a link. Include yourself."
+      placeholder: "Dualgame | Wrote the original rad-links | https://github.com/Dualgame"
   - type: checkboxes
     id: rules
     attributes:
@@ -50,4 +67,6 @@ body:
         - label: The source is public under an open-source license, and the launcher may redistribute its releases.
           required: true
         - label: I made this mod or may submit it for its authors.
+          required: true
+        - label: Everyone whose work the mod builds on is named in Credits, and their license files are in the repo.
           required: true
