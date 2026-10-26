@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "id": "minimal-mod",
+  "name": "Example mod",
+  "summary": "Logs the game's state changes. A starting point for your own mod.",
+  "description": "Observes the game's state changes and writes them to the mod's log. Hooks nothing, sends nothing anywhere.",
+  "source": {
+    "repo": "example-author/example-mod",
+    "license": "MIT"
+  },
+  "contact": {
+    "github": "example-author"
+  },
+  "listing": {
+    "state": "listed",
+    "submission_issue": 1,
+    "listed_at": "2026-10-26T12:00:00Z"
+  },
+  "versions": [
+    {
+      "version": "0.1.0",
+      "tag": "v0.1.0",
+      "commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "assets": {
+        "package": {
+          "name": "minimal-mod-v0.1.0-windows.zip",
+          "sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+          "size": 40100
+        },
+        "manifest": {
+          "name": "echo-mod.json",
+          "sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+          "size": 590
+        },
+        "sums": {
+          "name": "SHA256SUMS",
+          "sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+          "size": 182
+        }
+      },
+      "signer": {
+        "status": "unsigned"
+      }
+    }
+  ]
+}

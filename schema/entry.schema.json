@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EchoTools/echo-mods/schema/entry.schema.json",
+  "title": "A listed mod in echo-mods",
+  "description": "mods/<id>.json. The top-level fields up to 'credits' are what the author files (the submission). 'listing', 'fork' and 'versions' are filled in by a maintainer on approval and after each release. The release fields follow the plugin-release spec (release-signer docs/plugin-release.md); the signer block ($defs/release.signer) is not pinned by it and stays provisional. See docs/entry-format.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "name", "summary", "description", "source", "contact", "listing", "versions"],
+  "properties": {
+    "schema": { "const": 1 },
+    "id": {
+      "description": "The id in the mod's echo-mod.json. The file is mods/<id>.json.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "summary": { "description": "One line, shown in the plugin list.", "type": "string", "minLength": 1, "maxLength": 140, "pattern": "^[^\\n]+$" },
+    "description": { "description": "What it does, what it hooks, what it sends where. Plain text or Markdown.", "type": "string", "minLength": 1, "maxLength": 4000 },
+    "source": {
+      "description": "The author's own repository.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "license"],
+      "properties": {
+        "repo": { "$ref": "#/$defs/repo" },
+        "license": { "description": "SPDX id GitHub reports for the repo.", "type": "string", "pattern": "^[A-Za-z0-9.+-]{1,64}$", "not": { "const": "NOASSERTION" } }
+      }
+    },
+    "contact": {
+      "description": "How to reach the author. Public, like the rest of the entry: no e-mail addresses.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["github"],
+      "properties": {
+        "github": { "$ref": "#/$defs/githubLogin" },
+        "echovrce": { "description": "The EchoVRCE username players see.", "type": "string", "minLength": 1, "maxLength": 64 },
+        "links": { "type": "array", "maxItems": 5, "uniqueItems": true, "items": { "$ref": "#/$defs/httpsUrl" } }
+      }
+    },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "screenshots": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["url", "alt"],
+            "properties": {
+              "url": { "$ref": "#/$defs/httpsUrl" },
+              "alt": { "description": "What the picture shows, for people who can't see it.", "type": "string", "minLength": 1, "maxLength": 200 },
+              "caption": { "type": "string", "maxLength": 200 }
+            }
+          }
+        },
+        "video": { "$ref": "#/$defs/httpsUrl" }
+      }
+    },
+    "credits": {
+      "description": "Everyone whose work the mod builds on. The credit rule: code taken from somebody is named here, with its license kept in the repo.",
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "role"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "role": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "url": { "$ref": "#/$defs/httpsUrl" }
+        }
+      }
+    },
+    "fork": {
+      "description": "The EchoTools-owned repo that is built and signed. Required once any version is past signer status 'unsigned'.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo"],
+      "properties": {
+        "repo": { "type": "string", "pattern": "^EchoTools/[A-Za-z0-9._-]{1,100}$" }
+      }
+    },
+    "listing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "submission_issue", "listed_at"],
+      "properties": {
+        "state": { "description": "'listed' shows in the plugin list; 'delisted' keeps the record but offers nothing.", "enum": ["listed", "delisted"] },
+        "submission_issue": { "description": "The EchoTools/echo-mods issue the author filed.", "type": "integer", "minimum": 1 },
+        "listed_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+        "delisted_reason": { "type": "string", "minLength": 1, "maxLength": 300 }
+      },
+      "if": { "properties": { "state": { "const": "delisted" } } },
+      "then": { "required": ["delisted_reason"] },
+      "else": { "not": { "required": ["delisted_reason"] } }
+    },
+    "versions": {
+      "description": "Newest first.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/release" }
+    }
+  },
+  "$defs": {
+    "repo": { "description": "owner/name on GitHub.", "type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/[A-Za-z0-9._-]{1,100}$" },
+    "githubLogin": { "type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$" },
+    "httpsUrl": { "type": "string", "pattern": "^https://[^\\s/]+(?:/\\S*)?$", "maxLength": 500 },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "sha256", "size"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Za-z0-9._+-]{1,128}$" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "size": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "size"],
+      "properties": {
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "size": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "release": {
+      "description": "One release as the plugin-release spec defines it (release-signer docs/plugin-release.md, PR #25 at 642888d): section 2 the tag, section 4 the three assets, and the pin the signer approves (tag, commit, sha256 of each attested asset). The signer block is not in the spec.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "tag", "commit", "assets", "signer"],
+      "properties": {
+        "version": { "description": "echo-mod.json's version (semver).", "type": "string", "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$" },
+        "tag": { "description": "v<semver>, in the fork (spec section 2).", "type": "string", "pattern": "^v\\S+$" },
+        "commit": { "description": "The 40-hex commit the tag points at; the attestation names the same one.", "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "prerelease": { "type": "boolean" },
+        "assets": {
+          "description": "Exactly the three files the release workflow attested (spec section 4), with the sha256 it built them with (the signer's pin). size is for the plugin browser; the pin does not name it.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["package", "manifest", "sums"],
+          "properties": {
+            "package": { "description": "<id>-v<version>-windows.zip: the DLL, LICENSE, NOTICE.", "$ref": "#/$defs/asset" },
+            "manifest": { "description": "echo-mod.json", "$ref": "#/$defs/asset" },
+            "sums": { "description": "SHA256SUMS", "$ref": "#/$defs/asset" }
+          }
+        },
+        "signer": {
+          "description": "PROVISIONAL: the spec pins none of this. The listing's own record of where the release is in signing.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "properties": {
+            "status": {
+              "description": "unsigned: listed before signing existed. pending: the draft exists, no pin yet. approved: the pin is merged in release-signer. signed: the live run replaced the zip. revoked: signed once, no longer to be trusted.",
+              "enum": ["unsigned", "pending", "approved", "signed", "revoked"]
+            },
+            "record": { "description": "The signer's public record of the run.", "$ref": "#/$defs/httpsUrl" },
+            "signed_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+            "package": { "description": "The signed zip's digest. The manifest's is unchanged by signing; the sums file's is regenerated.", "$ref": "#/$defs/digest" },
+            "sums": { "$ref": "#/$defs/digest" }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "status": { "enum": ["signed", "revoked"] } } },
+              "then": { "required": ["record", "signed_at", "package", "sums"] },
+              "else": { "not": { "anyOf": [ { "required": ["record"] }, { "required": ["signed_at"] }, { "required": ["package"] }, { "required": ["sums"] } ] } }
+            }
+          ]
+        },
+        "pulled": {
+          "description": "Set by 'Pull a version': the launcher offers players the version before.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reason", "at"],
+          "properties": {
+            "reason": { "type": "string", "minLength": 1, "maxLength": 300 },
+            "at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" }
+          }
+        }
+      }
+    }
+  }
+}
