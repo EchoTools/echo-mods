@@ -141,6 +141,14 @@ class Review(unittest.TestCase):
         self.assertEqual(self.errors(["mods/x.json"], [self.review(state="CHANGES_REQUESTED"), self.review()]), [])
 
 
+class Workflow(unittest.TestCase):
+    def test_a_piped_gate_still_fails_the_job(self):
+        """`gates.py ... | tee` is green whatever gates.py exits unless the shell has pipefail."""
+        text = (ROOT / ".github" / "workflows" / "gates.yml").read_text(encoding="utf-8")
+        self.assertIn("| tee", text)
+        self.assertRegex(text, r"(?m)^defaults:\n  run:\n    shell: bash$")
+
+
 class Pins(unittest.TestCase):
     def check(self, text):
         with tempfile.TemporaryDirectory() as d:

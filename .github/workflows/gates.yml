@@ -15,6 +15,11 @@ on:
 
 permissions: {}
 
+# `shell: bash` runs with -eo pipefail; the default does not, and `| tee` would turn a failed gate green.
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: gates-${{ github.event.pull_request.number }}
   cancel-in-progress: true
