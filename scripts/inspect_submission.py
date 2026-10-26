@@ -23,6 +23,8 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+import package_layout
+
 # The launcher's own mods, and the published third-party ones.
 CATALOGUES = ("https://release.echovr.de/launcher/mods.json", "https://release.echovr.de/launcher/catalogue.json")
 THIS_REPO = os.environ.get("GITHUB_REPOSITORY", "EchoTools/echo-mods")
@@ -139,6 +141,23 @@ def taken_ids(report, own_number):
     return ids, files
 
 
+def release_layout(manifest):
+    """"package": the plugin-release layout (echo-mod.json names the zip); "loose": the older one."""
+    return "package" if isinstance(manifest.get("package"), str) else "loose"
+
+
+def check_package_release(check_mod, work, manifest, tag, prerelease, assets, sub):
+    """The template's manifest checks, then the plugin-release layout's: returns the unpacked DLL or None."""
+    check_mod.check_manifest(manifest, sub, work, published=True)
+    version = str(manifest.get("version", ""))
+    if tag != f"v{version}":
+        sub.error(f"tag {tag} doesn't match echo-mod.json's version: tag v{version}")
+    if check_mod.SEMVER.match(version) and bool(prerelease) != check_mod.is_prerelease(version):
+        sub.error("the GitHub prerelease flag doesn't match the version: a version with a prerelease part "
+                  "(1.2.0-beta.1) is a prerelease, any other isn't")
+    return package_layout.check_package(work, manifest, assets, sub)
+
+
 def check(args, report):
     fields = parse_form(os.environ.get("ISSUE_BODY", ""))
     author = os.environ.get("ISSUE_AUTHOR", "")
@@ -212,19 +231,28 @@ def check(args, report):
     download(assets["echo-mod.json"], work / "echo-mod.json")
     manifest = json.loads((work / "echo-mod.json").read_text(encoding="utf-8"))
     kind = manifest.get("kind", "mod")
-    main_file = manifest.get("file") if kind == "mod" else (manifest.get("pack") or {}).get("file")
+    # Two shapes of release: the plugin-release layout (a zip holding the DLL, named by "package") and the
+    # older one (the DLL, or a pack's zip, as a loose asset). Both are read until the first mod ships in the
+    # new shape.
+    layout = release_layout(manifest)
+    if layout == "package":
+        main_file = manifest["package"]
+    else:
+        main_file = manifest.get("file") if kind == "mod" else (manifest.get("pack") or {}).get("file")
     if not main_file or main_file not in assets:
         report.error(f"Release {tag} lacks the file its echo-mod.json names (`{main_file}`).")
         return
     download(assets["SHA256SUMS"], work / "SHA256SUMS")
     download(assets[main_file], work / main_file)
 
-    report.facts.update(file=main_file, sha256=sha256(work / main_file), size=(work / main_file).stat().st_size,
+    report.facts.update(layout=layout, file=manifest.get("file") if layout == "package" else main_file,
                         version=manifest.get("version"), kind=kind, capabilities=manifest.get("capabilities"),
                         target=manifest.get("target"), visibility=manifest.get("visibility", "public"))
+    if layout == "loose":
+        report.facts.update(sha256=sha256(work / main_file), size=(work / main_file).stat().st_size)
 
     # ---- the attestation: built by this repo's release workflow, from this tag ----
-    for f in (main_file, "echo-mod.json"):
+    for f in (main_file, "echo-mod.json") + (("SHA256SUMS",) if layout == "package" else ()):
         r = subprocess.run(["gh", "attestation", "verify", str(work / f), "--repo", full,
                             "--signer-workflow", f"{full}/.github/workflows/release.yml", "--format", "json"],
                            capture_output=True, text=True)
@@ -250,7 +278,13 @@ def check(args, report):
     if manifest.get("id") != mod_id:
         report.error(f"The release's id is `{manifest.get('id')}`, the form says `{mod_id}`.")
     sub = check_mod.Report()
-    _manifest, dll = check_mod.check_published(work, tag, release.get("prerelease", False), sub)
+    if layout == "package":
+        dll = check_package_release(check_mod, work, manifest, tag, release.get("prerelease", False),
+                                    list(assets), sub)
+        if dll is not None:
+            report.facts.update(sha256=sha256(dll), size=dll.stat().st_size, package=main_file)
+    else:
+        _manifest, dll = check_mod.check_published(work, tag, release.get("prerelease", False), sub)
     if dll is not None and dll.is_file():
         check_mod.check_dll(str(dll), manifest, sub)
         smoke_dir = work / "smoke"

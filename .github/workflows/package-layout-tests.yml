@@ -1,0 +1,21 @@
+# The submission check's tests: a fixture release in the plugin-release layout and the rules the check
+# applies to it. Runs no submitted code and holds no secrets.
+name: package layout tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  package-layout-tests:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: python3 -I -m unittest discover -s tests -k test_package_layout -v

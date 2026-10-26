@@ -66,8 +66,8 @@ def comment_body(report):
     for level, text in items:
         lines.append(f"- {ICONS.get(level, '•')} {clean(text)}")
     lines += ["", "<details><summary>What the check found</summary>", "", "| | |", "|---|---|"]
-    for key in ("repo", "tag", "version", "prerelease", "kind", "file", "sha256", "size", "capabilities", "target",
-                "visibility", "license", "imports", "attested_commit", "account_age_days", "echovrce"):
+    for key in ("repo", "tag", "version", "prerelease", "kind", "layout", "package", "file", "sha256", "size",
+                "capabilities", "target", "visibility", "license", "imports", "attested_commit", "account_age_days", "echovrce"):
         if key in facts:
             value = facts[key]
             if isinstance(value, list):
