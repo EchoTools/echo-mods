@@ -20,6 +20,7 @@ import sys
 import tempfile
 import urllib.error
 import urllib.request
+import submission_fields
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -38,6 +39,9 @@ SUBMISSION_HEADINGS = {
     "Mod id": "mod_id",
     "EchoVRCE username": "echovrce",
     "What does it do?": "about",
+    "Screenshots": "screenshots",
+    "Video": "video",
+    "Credits": "credits",
 }
 
 
@@ -155,6 +159,14 @@ def check(args, report):
     owner, name = m.group(1), m.group(2)
     if not fields.get("echovrce"):
         report.error("EchoVRCE username is missing.")
+    screenshots, e1 = submission_fields.parse_screenshots(fields.get("screenshots"))
+    video, e2 = submission_fields.parse_video(fields.get("video"))
+    credits, e3 = submission_fields.parse_credits(fields.get("credits"))
+    for text in e1 + e2 + e3:
+        report.error(text)
+    report.facts.update(media={"screenshots": screenshots, **({"video": video} if video else {})}, credits=credits)
+    if not credits:
+        report.warn("Credits is empty: name yourself, and everyone whose work the mod builds on.")
 
     # ---- the repo ----
     repo = gh_api(f"repos/{owner}/{name}", allow_404=True)
