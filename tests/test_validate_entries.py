@@ -50,6 +50,40 @@ class Valid(unittest.TestCase):
             self.assertEqual([json.loads(l) for l in log.read_text().splitlines()], records)
 
 
+def release(entry, version, commit_char):
+    """A copy of the newest release, as `version`."""
+    v = copy.deepcopy(entry["versions"][0])
+    v.update(version=version, tag=f"v{version}", commit=commit_char * 40, prerelease="-" in version)
+    v["assets"]["package"]["name"] = f"{entry['id']}-v{version}-windows.zip"
+    v["signer"] = {"status": "unsigned"}
+    return v
+
+
+class Precedence(unittest.TestCase):
+    """The order of versions is semver.org's precedence, not the text order."""
+
+    def run_versions(self, *versions):
+        entry = load("example-mod")
+        entry["versions"] = [release(entry, v, "c") for v in versions]
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "example-mod.json"
+            path.write_text(json.dumps(entry), encoding="utf-8")
+            return run(path)[0]
+
+    def test_release_above_its_prereleases(self):
+        self.assertEqual(self.run_versions("1.2.0", "1.2.0-rc.2", "1.2.0-rc.1", "1.2.0-beta", "1.1.9"), 0)
+
+    def test_numeric_identifiers_compare_as_numbers(self):
+        self.assertEqual(self.run_versions("1.0.0-rc.11", "1.0.0-rc.2"), 0)
+        self.assertEqual(self.run_versions("1.0.0-rc.2", "1.0.0-rc.11"), 1)
+
+    def test_prerelease_listed_above_its_release_fails(self):
+        self.assertEqual(self.run_versions("1.2.0-rc.1", "1.2.0"), 1)
+
+    def test_same_precedence_fails(self):
+        self.assertEqual(self.run_versions("1.2.0+a", "1.2.0+b"), 1)
+
+
 class Invalid(unittest.TestCase):
     def fails(self, mutate, expect, name="example-mod", filename=None):
         entry = load(name)

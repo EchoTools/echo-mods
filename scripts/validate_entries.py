@@ -28,15 +28,21 @@ except ImportError:
     sys.exit(2)
 
 ROOT = Path(__file__).resolve().parent.parent
-SEMVER_CORE = re.compile(r"^(\d+)\.(\d+)\.(\d+)")
+SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$")
 
 
 def now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
-def core(version):
-    return tuple(int(x) for x in SEMVER_CORE.match(version).groups())
+def precedence(version):
+    """semver.org's precedence as a sort key: build metadata ignored, a release above its prereleases,
+    numeric identifiers below alphanumeric ones."""
+    major, minor, patch, pre = SEMVER.match(version).groups()
+    if pre is None:
+        return (int(major), int(minor), int(patch), 1, ())
+    ids = tuple((0, int(i), "") if i.isdigit() else (1, 0, i) for i in pre.split("."))
+    return (int(major), int(minor), int(patch), 0, ids)
 
 
 def cross_checks(path, entry):
@@ -71,8 +77,9 @@ def cross_checks(path, entry):
                     errors.append(f"{label}: signer.{role} has the same sha256 as the attested assets.{role}: "
                                   "signing changes it")
     for older, newer in zip(versions[1:], versions):
-        if core(older["version"]) > core(newer["version"]):
-            errors.append(f"versions: {older['version']} is listed after {newer['version']}; newest first")
+        if precedence(older["version"]) >= precedence(newer["version"]):
+            errors.append(f"versions: {older['version']} is listed after {newer['version']}; newest first, each "
+                          "above the one below it by semver precedence")
     if any(v["signer"]["status"] != "unsigned" for v in versions):
         if "fork" not in entry:
             errors.append("fork: required once a version is past signer status 'unsigned'")

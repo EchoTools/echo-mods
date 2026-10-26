@@ -15,19 +15,23 @@ each release.
 | `listing` | maintainer | `state` (`listed` or `delisted`, which needs a `delisted_reason`), the `submission_issue`, `listed_at`. |
 | `versions` | maintainer | Newest first. One release each, below. |
 
-## A version (release fields: provisional)
+## A version
 
-These fields follow the release layout in the signing design (§2) and the pin the signer approves (§3).
-They are drafted ahead of the plugin-release spec and will be aligned with it when it lands.
+The release fields follow the plugin-release spec: release-signer's
+[`docs/plugin-release.md`](https://github.com/thesprockee/release-signer/blob/teth/plugin-release-spec/docs/plugin-release.md)
+(PR #25, at 642888d). The `signer` block is not in the spec and stays provisional.
 
 | Field | What |
 |---|---|
-| `version`, `tag`, `commit` | The semver, `v<version>`, and the 40-hex commit the tag points at in the fork. |
-| `assets.package` / `manifest` / `sums` | `<id>-v<version>-windows.zip`, `echo-mod.json`, `SHA256SUMS`: name, `sha256`, `size` as the release workflow built and attested them. |
-| `signer.status` | `unsigned` (listed before signing), `pending` (draft exists), `approved` (pin merged in the signer), `signed`, `revoked`. |
-| `signer.record`, `signed_at`, `package`, `sums` | Only on `signed` and `revoked`: the signer's public record, the time, and the digests of the signed zip and the regenerated sums (the manifest is unchanged by signing). They must differ from the attested ones. |
-| `pulled` | `reason` and `at`, set by "Pull a version". |
+| `version`, `tag`, `commit` | The semver, `v<version>` (`v1.2.0`, `v1.2.0-rc.1`; spec §2), and the 40-hex commit the tag points at in the fork. These and the sha256s below are the pin the signer approves. |
+| `assets.package` / `manifest` / `sums` | Exactly the three release assets (spec §4): `<id>-v<version>-windows.zip`, `echo-mod.json`, `SHA256SUMS`. Name and `sha256` as the release workflow built and attested them; `size` is for the plugin browser, the pin does not name it. |
 | `prerelease` | `true` exactly when the version has a `-suffix`. |
+| `pulled` | `reason` and `at`, set by "Pull a version". |
+| `signer.status` (provisional) | `unsigned` (listed before signing), `pending` (draft exists), `approved` (pin merged in the signer), `signed`, `revoked`. |
+| `signer.record`, `signed_at`, `package`, `sums` (provisional) | Only on `signed` and `revoked`: the signer's public record, the time, and the digests of the signed zip and the regenerated sums. `echo-mod.json` passes through signing untouched (spec §4), so it has no signed digest. They must differ from the attested ones. |
+
+Versions are listed newest first by semver precedence (`1.2.0` above `1.2.0-rc.2` above `1.2.0-rc.1`),
+each strictly above the next: the signer refuses a tag at or below one it already signed (spec §2).
 
 ## Checking
 
@@ -43,5 +47,5 @@ CI keeps them as the `validate-entries` artifact. The `validate entries` workflo
 pull request and every push to `main`.
 
 What the schema can't say, the validator checks: the file is `<id>.json`, the tag is `v<version>`,
-asset names are the release layout's, versions are unique and newest first, a signed digest differs
+asset names are the spec's, versions are unique and in descending semver precedence, a signed digest differs
 from the attested one, and a fork is not the author's own repo.
