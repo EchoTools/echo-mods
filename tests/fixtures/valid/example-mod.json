@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "id": "example-mod",
+  "name": "Example mod",
+  "summary": "Logs the game's state changes. A starting point for your own mod.",
+  "description": "Observes the game's state changes and writes them to the mod's log. Hooks nothing, sends nothing anywhere.",
+  "source": {
+    "repo": "example-author/example-mod",
+    "license": "MIT"
+  },
+  "contact": {
+    "github": "example-author",
+    "echovrce": "ExampleAuthor",
+    "links": [
+      "https://example.com/example-mod"
+    ]
+  },
+  "media": {
+    "screenshots": [
+      {
+        "url": "https://example.com/example-mod/log.png",
+        "alt": "The mod's log with three state changes",
+        "caption": "The log"
+      }
+    ],
+    "video": "https://example.com/example-mod/demo.mp4"
+  },
+  "credits": [
+    {
+      "name": "Example Author",
+      "role": "Wrote the mod",
+      "url": "https://github.com/example-author"
+    },
+    {
+      "name": "Someone Else",
+      "role": "The hook this mod's patch site comes from"
+    }
+  ],
+  "fork": {
+    "repo": "EchoTools/example-mod"
+  },
+  "listing": {
+    "state": "listed",
+    "submission_issue": 1,
+    "listed_at": "2026-10-26T12:00:00Z"
+  },
+  "versions": [
+    {
+      "version": "0.2.0",
+      "tag": "v0.2.0",
+      "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "assets": {
+        "package": {
+          "name": "example-mod-v0.2.0-windows.zip",
+          "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+          "size": 41230
+        },
+        "manifest": {
+          "name": "echo-mod.json",
+          "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "size": 611
+        },
+        "sums": {
+          "name": "SHA256SUMS",
+          "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+          "size": 182
+        }
+      },
+      "signer": {
+        "status": "signed",
+        "record": "https://example.com/signer/records/example-mod-v0.2.0",
+        "signed_at": "2026-10-27T09:30:00Z",
+        "package": {
+          "sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+          "size": 44100
+        },
+        "sums": {
+          "sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "size": 182
+        }
+      }
+    },
+    {
+      "version": "0.1.0",
+      "tag": "v0.1.0",
+      "commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "assets": {
+        "package": {
+          "name": "example-mod-v0.1.0-windows.zip",
+          "sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+          "size": 40100
+        },
+        "manifest": {
+          "name": "echo-mod.json",
+          "sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+          "size": 590
+        },
+        "sums": {
+          "name": "SHA256SUMS",
+          "sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+          "size": 182
+        }
+      },
+      "signer": {
+        "status": "unsigned"
+      },
+      "pulled": {
+        "reason": "Crashed on the loading screen.",
+        "at": "2026-10-26T18:00:00Z"
+      }
+    }
+  ]
+}

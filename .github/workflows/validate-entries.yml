@@ -1,0 +1,36 @@
+# Checks mods/*.json against schema/entry.schema.json and runs the validator's own tests. Runs no
+# code from a submission and holds no secrets.
+name: validate entries
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install the validator's one dependency
+        run: python3 -m venv "$RUNNER_TEMP/venv" && "$RUNNER_TEMP/venv/bin/pip" install --quiet jsonschema==4.26.0
+
+      - name: Validator tests
+        run: "$RUNNER_TEMP/venv/bin/python" -I -m unittest discover -s tests -v
+
+      - name: Validate the listed entries
+        run: "$RUNNER_TEMP/venv/bin/python" -I scripts/validate_entries.py --log validate.jsonl
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: validate-entries
+          path: validate.jsonl
+          retention-days: 90
